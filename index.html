@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文字数カウンター</title>
+<style>
+  :root {
+    --paper: #F3F5F2;
+    --sheet: #FFFFFF;
+    --ink: #22302A;
+    --muted: #5E6D65;
+    --rule: #CBD5CE;
+    --accent: #2F7D5B;
+    --accent-soft: #DCEDE4;
+    --warn: #A15C00;
+    --warn-soft: #FBEBD2;
+    --over: #C62828;
+    --over-soft: #FBE3E3;
+    --font-ui: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Hiragino Sans", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #16201B;
+      --sheet: #1E2B24;
+      --ink: #E6EEE9;
+      --muted: #9DB0A5;
+      --rule: #34463C;
+      --accent: #5BC391;
+      --accent-soft: #24382E;
+      --warn: #F0B35A;
+      --warn-soft: #3A2F1A;
+      --over: #FF8A80;
+      --over-soft: #4A2424;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.6;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 28px 20px 48px; }
+  h1 { font-size: 1.35rem; margin: 0 0 4px; letter-spacing: .02em; }
+  .lead { margin: 0 0 20px; color: var(--muted); font-size: .9rem; }
+
+  .editor {
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 280px;
+    resize: vertical;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.7;
+    padding: 14px 16px;
+    border-radius: 8px;
+  }
+  textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+  .toolbar { display: flex; justify-content: flex-end; margin: 8px 0 16px; }
+  button {
+    font: inherit;
+    font-size: .875rem;
+    color: var(--ink);
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0 0 20px; }
+  .stat {
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .stat dt { color: var(--muted); font-size: .8rem; margin: 0; }
+  .stat dd { margin: 2px 0 0; font-family: var(--font-mono); font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat.primary dd { color: var(--accent); }
+  body.over .stat.primary { border-color: var(--over); background: var(--over-soft); }
+  body.over .stat.primary dd { color: var(--over); }
+
+  .twitter {
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 16px 18px 18px;
+  }
+  .twitter header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; justify-content: space-between; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .limit { display: inline-flex; align-items: center; gap: 8px; font-size: .875rem; color: var(--muted); }
+  .limit input {
+    width: 6.5em;
+    font: inherit;
+    font-family: var(--font-mono);
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 4px 8px;
+    text-align: right;
+  }
+  .limit input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .limit input:disabled { opacity: .5; }
+
+  .tw-body { margin-top: 14px; transition: opacity .15s; }
+  .twitter[data-active="false"] .tw-body { opacity: .45; }
+  .tw-numbers { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+  .tw-count { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tw-count small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+  .tw-status { font-size: .9rem; color: var(--muted); font-weight: 600; }
+  .bar { height: 10px; margin-top: 8px; background: var(--paper); border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .08s linear; }
+  .twitter[data-state="near"] .bar > span { background: var(--warn); }
+  .twitter[data-state="near"] .tw-status { color: var(--warn); }
+  .twitter[data-state="over"] { border-color: var(--over); background: var(--over-soft); }
+  .twitter[data-state="over"] .bar > span { background: var(--over); }
+  .twitter[data-state="over"] .tw-count,
+  .twitter[data-state="over"] .tw-count small,
+  .twitter[data-state="over"] .tw-status { color: var(--over); }
+
+  .note { margin: 14px 0 0; color: var(--muted); font-size: .8rem; }
+  footer { margin-top: 24px; color: var(--muted); font-size: .8rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>文字数カウンター</h1>
+  <p class="lead">入力や削除のたびに、文字数がその場で増減します。</p>
+
+  <div class="editor">
+    <label for="text" class="visually-hidden" style="position:absolute;left:-9999px">カウントする文章</label>
+    <textarea id="text" placeholder="ここに文章を入力、または貼り付けてください" spellcheck="false" autofocus></textarea>
+  </div>
+  <div class="toolbar"><button type="button" id="clear">クリア</button></div>
+
+  <dl class="stats">
+    <div class="stat primary"><dt>文字数</dt><dd id="c-total">0</dd></div>
+    <div class="stat"><dt>空白・改行を除く</dt><dd id="c-nospace">0</dd></div>
+    <div class="stat"><dt>行数</dt><dd id="c-lines">0</dd></div>
+  </dl>
+
+  <section class="twitter" id="twitter" data-active="false" data-state="off" aria-labelledby="tw-title">
+    <header>
+      <label class="toggle" id="tw-title">
+        <input type="checkbox" id="tw-on">
+        Twitter（X）投稿用の文字数チェック
+      </label>
+      <label class="limit">制限
+        <input type="number" id="tw-limit" value="280" min="1" max="100000" step="1" inputmode="numeric">
+      </label>
+    </header>
+    <div class="tw-body">
+      <div class="tw-numbers">
+        <span class="tw-count"><span id="tw-count">0</span><small> / <span id="tw-limit-view">280</span></small></span>
+        <span class="tw-status" id="tw-status" aria-live="polite"></span>
+      </div>
+      <div class="bar" aria-hidden="true"><span id="tw-bar"></span></div>
+    </div>
+    <p class="note">Xの数え方に近づけた目安です：日本語・全角文字は1文字を2、半角英数字・記号は1、URLは長さによらず23として数えます。投稿前には、Xの投稿画面でも確認してください。</p>
+  </section>
+
+  <footer>入力した文章はこのブラウザの中だけで処理され、どこにも送信・保存されません。</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var text = $('text');
+  var twOn = $('tw-on');
+  var twLimit = $('tw-limit');
+  var twitter = $('twitter');
+
+  var segmenter = (typeof Intl !== 'undefined' && Intl.Segmenter)
+    ? new Intl.Segmenter('ja', { granularity: 'grapheme' }) : null;
+
+  // 画面に見える1文字（絵文字・結合文字を含む）単位に分割する
+  function graphemes(s) {
+    if (!s) return [];
+    if (segmenter) {
+      var out = [];
+      var it = segmenter.segment(s)[Symbol.iterator]();
+      for (var r = it.next(); !r.done; r = it.next()) out.push(r.value.segment);
+      return out;
+    }
+    return Array.from(s);
+  }
+
+  // Xの文字の重み：下記の範囲は1、それ以外（日本語・絵文字など）は2
+  function codePointWeight(cp) {
+    if ((cp >= 0 && cp <= 4351) || (cp >= 8192 && cp <= 8205) ||
+        (cp >= 8208 && cp <= 8223) || (cp >= 8242 && cp <= 8247)) return 1;
+    return 2;
+  }
+
+  var URL_RE = /https?:\/\/[\x21-\x7E]+/g;
+  var EMOJI_RE = /\p{Extended_Pictographic}/u;
+
+  function twitterWeight(s) {
+    var weight = 0;
+    var rest = s.normalize('NFC').replace(URL_RE, function () { weight += 23; return ''; });
+    graphemes(rest).forEach(function (g) {
+      if (EMOJI_RE.test(g)) { weight += 2; return; }
+      for (var ch of g) weight += codePointWeight(ch.codePointAt(0));
+    });
+    return weight;
+  }
+
+  function getLimit() {
+    var n = parseInt(twLimit.value, 10);
+    return (n > 0) ? n : 280;
+  }
+
+  function update() {
+    var v = text.value;
+    $('c-total').textContent = graphemes(v).length;
+    $('c-nospace').textContent = graphemes(v.replace(/\s/g, '')).length;
+    $('c-lines').textContent = v === '' ? 0 : v.split(/\r\n|\r|\n/).length;
+
+    var active = twOn.checked;
+    var limit = getLimit();
+    twitter.dataset.active = String(active);
+    twLimit.disabled = !active;
+    $('tw-limit-view').textContent = limit;
+
+    var state = 'off';
+    if (!active) {
+      $('tw-count').textContent = '—';
+      $('tw-status').textContent = 'オフ';
+      $('tw-bar').style.width = '0';
+    } else {
+      var w = twitterWeight(v);
+      $('tw-count').textContent = w;
+      $('tw-bar').style.width = Math.min(100, w / limit * 100) + '%';
+      if (w > limit) {
+        state = 'over';
+        $('tw-status').textContent = (w - limit) + ' 超過';
+      } else {
+        state = (w >= limit * 0.9) ? 'near' : 'ok';
+        $('tw-status').textContent = '残り ' + (limit - w);
+      }
+    }
+    twitter.dataset.state = state;
+    document.body.classList.toggle('over', state === 'over');
+  }
+
+  function save() {
+    try {
+      localStorage.setItem('char-counter.tw-on', twOn.checked ? '1' : '0');
+      localStorage.setItem('char-counter.tw-limit', String(getLimit()));
+    } catch (e) { /* 保存できなくても動作に影響しない */ }
+  }
+
+  try {
+    twOn.checked = localStorage.getItem('char-counter.tw-on') === '1';
+    var savedLimit = parseInt(localStorage.getItem('char-counter.tw-limit'), 10);
+    if (savedLimit > 0) twLimit.value = savedLimit;
+  } catch (e) { /* 読み出せなければ既定値のまま */ }
+
+  // 入力・削除・貼り付け・切り取り・IME確定など、内容が変わるたびに発火する
+  text.addEventListener('input', update);
+  twOn.addEventListener('change', function () { save(); update(); });
+  twLimit.addEventListener('input', function () { save(); update(); });
+  $('clear').addEventListener('click', function () { text.value = ''; update(); text.focus(); });
+
+  update();
+})();
+</script>
+</body>
+</html>
