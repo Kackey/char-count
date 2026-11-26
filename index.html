@@ -160,7 +160,7 @@
   <section class="twitter" id="twitter" data-active="false" data-state="off" aria-labelledby="tw-title">
     <header>
       <label class="toggle" id="tw-title">
-        <input type="checkbox" id="tw-on">
+        <input type="checkbox" id="tw-on" checked>
         Twitter（X）投稿用の文字数チェック
       </label>
       <label class="limit">制限
@@ -271,7 +271,8 @@
   }
 
   try {
-    twOn.checked = localStorage.getItem('char-counter.tw-on') === '1';
+    var savedOn = localStorage.getItem('char-counter.tw-on');
+    if (savedOn !== null) twOn.checked = (savedOn === '1');
     var savedLimit = parseInt(localStorage.getItem('char-counter.tw-limit'), 10);
     if (savedLimit > 0) twLimit.value = savedLimit;
   } catch (e) { /* 読み出せなければ既定値のまま */ }
